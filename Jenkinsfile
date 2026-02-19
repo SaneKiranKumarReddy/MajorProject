@@ -1,69 +1,64 @@
 pipeline {
   agent any
 
-  // Keep console tidy, set a hard cap on job time
   options {
     timestamps()
-    timeout(time: 45, unit: 'MINUTES')
+    timeout(time: 45, unit: 'MINUTES')   // hard cap so builds never hang forever
   }
 
-  // Make browser binaries persistent across builds to avoid re-downloads.
-  // Create this folder first and ensure the Jenkins service account has RW access.
+  // Optional: set a persistent folder so Playwright doesn't re-download browsers every build
+  // Make sure this path exists and the Jenkins service account has read/write access.
   environment {
-    PLAYWRIGHT_BROWSERS_PATH = 'D:\\pw-browsers'
+    PLAYWRIGHT_BROWSERS_PATH = 'D:\\pw-browsers'   // change or remove if you don't want to persist
     CI = 'true'
   }
 
   stages {
+
     stage('Checkout') {
-      steps { checkout scm }
+      steps {
+        checkout scm
+      }
     }
 
     stage('Install dependencies') {
       steps {
-        // Color wrapper for readable logs (requires AnsiColor plugin)
-        wrap([$class: 'AnsiColorBuildWrapper', colorMapName: 'xterm']) {
-          bat 'node -v'
-          bat 'npm -v'
-          bat 'npm ci'
-        }
+        bat 'node -v'
+        bat 'npm -v'
+        bat 'npm ci'                  // installs node_modules (repo does not need to contain them)
       }
     }
 
-    stage('Install Playwright browsers (idempotent)') {
+    stage('Install Playwright browsers') {
       steps {
-        wrap([$class: 'AnsiColorBuildWrapper', colorMapName: 'xterm']) {
-          // 1st run downloads; subsequent runs reuse D:\pw-browsers
-          bat 'npx playwright install'
-        }
+        // First time it downloads; subsequent runs reuse D:\pw-browsers
+        bat 'npx playwright install'
       }
     }
 
-    stage('Cross-browser tests') {
+    stage('Run in Chromium, Firefox, WebKit') {
       matrix {
         axes {
           axis {
             name 'BROWSER'
-            values 'chromium', 'firefox', 'webkit'   // webkit ≈ Safari engine in Playwright
+            values 'chromium', 'firefox', 'webkit'
           }
         }
         stages {
-          stage('Run') {
+          stage('Test') {
             steps {
-              wrap([$class: 'AnsiColorBuildWrapper', colorMapName: 'xterm']) {
-                // If your config defines the projects, this just selects them.
-                bat "npx playwright test --project=%BROWSER%"
-              }
+              // Assumes your playwright.config.* defines projects named chromium/firefox/webkit
+              bat "npx playwright test --project=%BROWSER%"
             }
             post {
               always {
-                // If you enabled JUnit reporter in playwright.config.js, publish results:
+                // If you enabled JUnit reporter in playwright config, publish results:
                 // junit testResults: 'test-results/junit/results.xml', allowEmptyResults: true
 
-                // Archive HTML report (created by Playwright's html reporter)
+                // Archive HTML report so you can view it from Jenkins
                 archiveArtifacts artifacts: 'playwright-report/**', allowEmptyArchive: true
 
-                // (Optional) Archive traces/screenshots if you save them
+                // (Optional) if you save traces/screenshots, keep them too
                 archiveArtifacts artifacts: 'test-results/**/*.zip, test-results/**/*.png', allowEmptyArchive: true
               }
             }
@@ -74,7 +69,7 @@ pipeline {
   }
 
   post {
-    success { echo '✅ All 3 browsers passed.' }
-    failure { echo '❌ One or more browsers failed. Check the reports and console output.' }
+    success { echo ' Tests passed on chromium, firefox, and webkit.' }
+    failure { echo ' Some browser failed. Check console and reports.' }
   }
 }
