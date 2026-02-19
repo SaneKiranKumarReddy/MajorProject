@@ -1,16 +1,17 @@
 pipeline {
   agent any
 
+  // Keep console tidy, set a hard cap on job time
   options {
     timestamps()
-    ansiColor('xterm')
-    // hard cap the entire job
     timeout(time: 45, unit: 'MINUTES')
   }
 
+  // Make browser binaries persistent across builds to avoid re-downloads.
+  // Create this folder first and ensure the Jenkins service account has RW access.
   environment {
-    CI = 'true'  // tells Playwright "we're in CI"
-    // DEBUG = 'pw:api' // uncomment for very verbose PW logs
+    PLAYWRIGHT_BROWSERS_PATH = 'D:\\pw-browsers'
+    CI = 'true'
   }
 
   stages {
@@ -18,45 +19,51 @@ pipeline {
       steps { checkout scm }
     }
 
-    stage('Install deps') {
+    stage('Install dependencies') {
       steps {
-        bat 'node -v'
-        bat 'npm -v'
-        bat 'npm ci'
+        // Color wrapper for readable logs (requires AnsiColor plugin)
+        wrap([$class: 'AnsiColorBuildWrapper', colorMapName: 'xterm']) {
+          bat 'node -v'
+          bat 'npm -v'
+          bat 'npm ci'
+        }
       }
     }
 
-    stage('Install PW Browsers') {
+    stage('Install Playwright browsers (idempotent)') {
       steps {
-        bat 'npx playwright install'
+        wrap([$class: 'AnsiColorBuildWrapper', colorMapName: 'xterm']) {
+          // 1st run downloads; subsequent runs reuse D:\pw-browsers
+          bat 'npx playwright install'
+        }
       }
     }
 
-    stage('Cross-browser matrix') {
+    stage('Cross-browser tests') {
       matrix {
         axes {
           axis {
             name 'BROWSER'
-            values 'chromium', 'firefox', 'webkit'
+            values 'chromium', 'firefox', 'webkit'   // webkit ≈ Safari engine in Playwright
           }
         }
         stages {
-          stage('Run tests') {
+          stage('Run') {
             steps {
-              // Per-branch timeout in case a project hangs
-              timeout(time: 20, unit: 'MINUTES') {
-                // Keep it headless in CI. If you need headed, run the agent
-                // as an interactive user and use a desktop session.
-                bat "npx playwright test --project=%BROWSER% --reporter=list,junit"
+              wrap([$class: 'AnsiColorBuildWrapper', colorMapName: 'xterm']) {
+                // If your config defines the projects, this just selects them.
+                bat "npx playwright test --project=%BROWSER%"
               }
             }
             post {
               always {
-                // JUnit: enable in playwright.config.js
-                junit testResults: 'test-results/junit/results.xml', allowEmptyResults: true
-                // HTML report (created by PW’s html reporter)
+                // If you enabled JUnit reporter in playwright.config.js, publish results:
+                // junit testResults: 'test-results/junit/results.xml', allowEmptyResults: true
+
+                // Archive HTML report (created by Playwright's html reporter)
                 archiveArtifacts artifacts: 'playwright-report/**', allowEmptyArchive: true
-                // Traces/screens if you keep them
+
+                // (Optional) Archive traces/screenshots if you save them
                 archiveArtifacts artifacts: 'test-results/**/*.zip, test-results/**/*.png', allowEmptyArchive: true
               }
             }
@@ -67,8 +74,7 @@ pipeline {
   }
 
   post {
-    success { echo '✅ All browsers passed.' }
-    failure { echo '❌ Some browser(s) failed. Check Console + Reports.' }
-    always  { echo "Pipeline finished at ${new Date()}" }
+    success { echo '✅ All 3 browsers passed.' }
+    failure { echo '❌ One or more browsers failed. Check the reports and console output.' }
   }
 }
