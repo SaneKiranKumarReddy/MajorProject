@@ -1,0 +1,65 @@
+{
+  "baseUrl": "https://www.easemytrip.com",
+
+  "cabs": {
+    "tabName": "Cabs",
+    "tripType": "Outstation",
+    "from": "delhi",
+    "to": "manali kullu,himachal pradesh",
+    "dayOfMonth": 23  ,
+    "time": {
+      "hourLabel": "6 Hr.",
+      "ampm": "AM",
+      "minuteLabel": "30 Min."
+    },
+    "vehicleTypeClick": "suv",
+    "selectors": {
+      "menuRoot": "#homepagemenuUL",
+      "fromInput": "#sourceName",
+      "toInput": "#destinationName",
+      "dateInputAria": "Select Date",
+      "searchButton": "#CommonSearch",
+      "listPriceContainer": "._listflx"
+    }
+  },
+
+  "hotels": {
+    "tabName": "HOTELS",
+    "city": "delhi",
+    "selectors": {
+      "cityOpen": ".selectHtlCity",
+      "cityInputAria": "Enter City Name, Location, or",
+      "firstSuggestion": ".auto_sugg_tttl",
+      "paxPanel": "#divPaxPanel",
+      "adultsPlus": "#Adults_room_1_1_plus",
+      "guestCount": "#guestcount",
+      "addRoomButton": "#addhotelRoom",
+      "roomBlock": ".box",
+      "exitRoomPanel": "#exithotelroom"
+    },
+    "clickDelaysMs": {
+      "adultsIncrement": 200,
+      "addRoom": 250
+    }
+  },
+
+  "giftcard": {
+    "openMoreMenuText": "More",
+    "entryLinkName": "Gift Card Buy giftcards here",
+    "cardImageAlt": "Birthday Card",
+    "amountInputAria": "Min 500 -",
+    "amount": "5000",
+    "quantityValue": "5",
+    "dateOptionText": "Today",
+    "senderNameAria": "Sender's name*",
+    "senderName": "Tony Stark",
+    "senderEmailAria": "Sender's email address*",
+    "senderEmail": "stark@123",
+    "senderMobileAria": "Sender's 10 digits mobile",
+    "senderMobile": "9123456789",
+    "receiverSameAsCheckboxAria": "Receiver Details Same as",
+    "termsSecondCheckboxIndex": 1,
+    "payNowText": "Pay Now",
+    "errorSelector":".err_msg.ng-binding"
+  }
+}
