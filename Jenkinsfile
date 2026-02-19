@@ -1,38 +1,56 @@
 pipeline {
-    agent any
+  agent any
 
-    stages {
-
-        stage('Checkout') {
-            steps {
-                checkout scm
-            }
-        }
-
-        stage('Install dependencies') {
-            steps {
-                bat 'npm ci'
-            }
-        }
-
-        stage('Install Playwright Browsers (always download)') {
-            steps {
-                // This ALWAYS downloads Chromium + Firefox + WebKit
-                bat 'npx playwright install'
-            }
-        }
-
-        stage('Run Tests on All Browsers') {
-            steps {
-                // Runs all Playwright projects defined in your playwright.config.js
-                bat 'npx playwright test'
-            }
-        }
-
-        stage('Archive Report') {
-            steps {
-                archiveArtifacts artifacts: 'playwright-report/**', allowEmptyArchive: true
-            }
-        }
+  stages {
+    stage('Checkout') {
+      steps {
+        checkout scm
+      }
     }
+
+    stage('Install dependencies') {
+      steps {
+        bat 'npm ci'
+      }
+    }
+
+    stage('Install Playwright browsers (fresh each run)') {
+      steps {
+        bat 'npx playwright install'
+      }
+    }
+
+    stage('Run - Chromium') {
+      steps {
+        bat 'npx playwright test --project=chromium'
+      }
+      post {
+        always {
+          archiveArtifacts artifacts: 'playwright-report/**', allowEmptyArchive: true
+        }
+      }
+    }
+
+    stage('Run - Firefox') {
+      steps {
+        bat 'npx playwright test --project=firefox'
+      }
+      post {
+        always {
+          archiveArtifacts artifacts: 'playwright-report/**', allowEmptyArchive: true
+        }
+      }
+    }
+
+    stage('Run - WebKit') {
+      steps {
+        bat 'npx playwright test --project=webkit'
+      }
+      post {
+        always {
+          archiveArtifacts artifacts: 'playwright-report/**', allowEmptyArchive: true
+        }
+      }
+    }
+  }
 }
